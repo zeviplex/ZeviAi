@@ -1,55 +1,42 @@
-import os
-from telegram.ext import Updater, MessageHandler, CommandHandler
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackContext
 
-# Define a knowledge base of Ayurvedic medicines
-ayurvedic_medicines = {
-    'neem': 'Neem is known for its antibacterial properties and is used to treat various skin conditions and infections.',
-    'turmeric': 'Turmeric has anti-inflammatory and antioxidant properties and is used to improve digestion and reduce inflammation.',
-    'ashwagandha': 'Ashwagandha is an adaptogenic herb that helps reduce stress and anxiety and improve overall vitality.',
-    # Add more Ayurvedic medicines and their descriptions here
+# Replace 'YOUR_BOT_TOKEN' with your actual bot token
+TOKEN = '6512988172:AAFLthU6tqov5WVB3Kznehgu1dUQSpLMUdk'
+
+# Simple Ayurvedic knowledge base (replace with a real database or API)
+knowledge_base = {
+    "What is Ayurveda?": "Ayurveda is a traditional system of medicine that originated in India...",
+    "Can you recommend Ayurvedic remedies for a cold?": "Certainly! You can try a combination of ginger, honey, and turmeric for relief...",
+    "What are the three doshas in Ayurveda?": "The three doshas in Ayurveda are Vata, Pitta, and Kapha. They represent different body types and energies...",
+    "How should I maintain a balanced diet according to Ayurveda?": "Ayurveda recommends a balanced diet based on your dosha type. For example, a Vata person should eat warm, nourishing foods...",
+    "Tell me about Ayurvedic herbs for stress relief.": "Some Ayurvedic herbs for stress relief include Ashwagandha, Brahmi, and Tulsi...",
 }
 
-# Define a function to start the bot
-def start(update, context):
-    user = update.message.from_user
-    update.message.reply_text(f"Hello, {user.first_name}! How can I assist you today?")
+def start(update: Update, context: CallbackContext) -> None:
+    user = update.effective_user
+    update.message.reply_markdown_v2(
+        fr"Hi {user.mention_markdown_v2()}!",
+        reply_markup=None,
+    )
+    update.message.reply_text("Welcome to the Ayurvedic Medicine Bot! Ask me your questions.")
 
-# Define a function to search the knowledge base
-def search(update, context):
-    user_message = update.message.text.lower()
-    
-    if user_message in ayurvedic_medicines:
-        medicine_description = ayurvedic_medicines[user_message]
-        update.message.reply_text(f"Here's information about {user_message}: {medicine_description}")
-    else:
-        update.message.reply_text("I'm sorry, I couldn't find information about that. Please ask about an Ayurvedic medicine.")
+def answer_question(update: Update, context: CallbackContext) -> None:
+    user_question = update.message.text
+    response = get_answer(user_question)
+    update.message.reply_text(response)
 
-# Define a function to handle unknown commands
-def unknown(update, context):
-    update.message.reply_text("I'm not sure what you mean. Please type a valid command or ask about an Ayurvedic medicine.")
+def get_answer(user_question):
+    # Look up the user's question in the knowledge base
+    return knowledge_base.get(user_question, "I'm sorry, I don't have information about that.")
 
-def main():
-    # Initialize your bot with your Telegram bot token from Render's environment variables
-    bot_token = os.getenv("BOT_TOKEN")
-    if not bot_token:
-        raise ValueError("BOT_TOKEN not found in environment variables.")
-    
-    updater = Updater(token=bot_token, use_context=True)
-    dispatcher = updater.dispatcher
+def main() -> None:
+    updater = Updater(TOKEN, use_context=True)
+    dp = updater.dispatcher
 
-    # Define command handlers
-    start_handler = CommandHandler('start', start)
-    dispatcher.add_handler(start_handler)
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(MessageHandler(None, answer_question))  # Removed filters
 
-    # Define message handler to search for Ayurvedic medicine information
-    message_handler = MessageHandler(Filters.text & ~Filters.command, search)
-    dispatcher.add_handler(message_handler)
-
-    # Define a handler for unknown commands
-    unknown_handler = MessageHandler(Filters.command, unknown)
-    dispatcher.add_handler(unknown_handler)
-
-    # Start the bot
     updater.start_polling()
     updater.idle()
 
